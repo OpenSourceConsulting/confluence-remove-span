@@ -1,0 +1,15 @@
+logging:
+  level:
+    org.springframework.web: WARN
+    com.osci.confluence: DEBUG
+    
+jdbc:
+  driver: oracle.jdbc.OracleDriver
+  url: jdbc:oracle:thin:@192.168.0.155:1521:oscOra12
+  username: kapwiki
+  password: kapwiki
+  
+wiki:
+  span:
+    count: 3
+  dryRun: false
