@@ -59,7 +59,7 @@ public class RemoveSpanService {
 	private String username;
 	@Value("${jdbc.password}")
 	private String password;
-	@Value("${wiki.span.count:2}")
+	@Value("${wiki.span.count:3}")
 	private Integer spanCount;
 	@Value("${wiki.dryRun:false}")
 	private Boolean dryRun;
@@ -78,7 +78,7 @@ public class RemoveSpanService {
 			conn = getConnection();
 			stmt = conn.createStatement();
 			
-		    // CLOB column에 대한 lock을 얻는다.
+		    // Update 대상 Row를 질의한다.
 			if (id != null) {
 				query = "select BODYCONTENTID, BODY, CONTENTID, BODYTYPEID from BODYCONTENT WHERE CONTENTID = '" + id + "'";
 			} else {
@@ -154,32 +154,8 @@ public class RemoveSpanService {
 			conn.setAutoCommit(false);
 
 			stmt = conn.createStatement();
-			
-//			CLOB lob_loc = null;
 
-//		    ResultSet rset = stmt.executeQuery("SELECT BODY FROM BODYCONTENT WHERE CONTENTID = " + contentId + " FOR UPDATE");
-		    
-//			if (rset.next()) {
-//				lob_loc = ((OracleResultSet) rset).getCLOB(1);
-//			}
-			
-			// Open the LOB for READWRITE:
-//			OracleCallableStatement cstmt = (OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.OPEN(?, DBMS_LOB.LOB_READWRITE); END;");
-//			cstmt.setCLOB(1, lob_loc);
-//			cstmt.execute();
-			
-			// Erase the LOB
-//			OracleCallableStatement cstmt = (OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.TRIM(?, 0); END;");
-//			cstmt.setCLOB(1, lob_loc);
-//			cstmt.execute();
-			
-			// Update the LOB
-//			cstmt = (OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.WRITE(?, ?, 1, ?); END;");
-//			cstmt.setCLOB(1, lob_loc);
-//			cstmt.setInt(2, content.length());
-//			cstmt.setString(3, content);
-//			cstmt.execute();
-
+			//*
 			int count = content.length() / 2000;
 			
 			if ((content.length() % 2000) > 0) {
@@ -205,12 +181,40 @@ public class RemoveSpanService {
 			String sql = "update BODYCONTENT set BODY = " + contentStr + " where CONTENTID = " + contentId;
 			logger.debug(sql);
 			stmt.executeUpdate(sql);
+			/*/
+			CLOB lob_loc = null;
+
+		    ResultSet rset = stmt.executeQuery("SELECT BODY FROM BODYCONTENT WHERE CONTENTID = " + contentId + " FOR UPDATE");
+		    
+			if (rset.next()) {
+				lob_loc = ((oracle.jdbc.OracleResultSet) rset).getCLOB(1);
+			}
+			
+			// Open the LOB for READWRITE:
+			oracle.jdbc.OracleCallableStatement cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.OPEN(?, DBMS_LOB.LOB_READWRITE); END;");
+			cstmt.setCLOB(1, lob_loc);
+			cstmt.execute();
+			
+			// Erase the LOB
+			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.TRIM(?, 0); END;");
+			cstmt.setCLOB(1, lob_loc);
+			cstmt.execute();
+			
+			// Update the LOB
+			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.WRITE(?, ?, 1, ?); END;");
+			cstmt.setCLOB(1, lob_loc);
+			cstmt.setInt(2, content.length());
+			cstmt.setString(3, content);
+			cstmt.execute();
 			
 			// Close the LOB:
-//			cstmt = (OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.CLOSE(?); END;");
-//			cstmt.setCLOB(1, lob_loc);
-//			cstmt.execute();
-
+			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.CLOSE(?); END;");
+			cstmt.setCLOB(1, lob_loc);
+			cstmt.execute();
+			
+			cstmt.close();
+			//*/
+			
 			stmt.close();
 			
 			conn.commit();
