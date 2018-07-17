@@ -21,12 +21,15 @@
 package com.osci.confluence.service;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -43,14 +46,15 @@ import oracle.sql.CLOB;
  * <pre>
  * 
  * </pre>
+ * 
  * @author Sang-cheon Park
  * @version 1.0
  */
 @Component
 public class RemoveSpanService {
-	
-    private static final Logger logger = LoggerFactory.getLogger(RemoveSpanService.class);
-	
+
+	private static final Logger logger = LoggerFactory.getLogger(RemoveSpanService.class);
+
 	@Value("${jdbc.driver}")
 	private String driver;
 	@Value("${jdbc.url}")
@@ -63,81 +67,95 @@ public class RemoveSpanService {
 	private Integer spanCount;
 	@Value("${wiki.dryRun:false}")
 	private Boolean dryRun;
-	
+
 	private Connection conn = null;
 
 	public void removeSpan(Integer id) {
 		logger.debug("wiki.span.count : {}", spanCount);
-		logger.debug("wiki.dryRun : {}", dryRun);
-		
+
 		Statement stmt = null;
 		ResultSet rs = null;
-		
+
 		String query = null;
 		try {
 			conn = getConnection();
 			stmt = conn.createStatement();
-			
-		    // Update 대상 Row를 질의한다.
+
+			// Update 대상 Row를 질의한다.
 			if (id != null) {
 				query = "select BODYCONTENTID, BODY, CONTENTID, BODYTYPEID from BODYCONTENT WHERE CONTENTID = '" + id + "'";
 			} else {
 				query = "select BODYCONTENTID, BODY, CONTENTID, BODYTYPEID from BODYCONTENT WHERE dbms_lob.instr(BODY, '";
-				
+
 				int cnt = 0;
-				
+
 				while (cnt++ < spanCount) {
 					query += "<span lang=\"ko\">";
 				}
-				
+
 				query += "') > 0";
 			}
-			
-			logger.debug("Query string : [{}]", query);
 
 			rs = stmt.executeQuery(query);
-			
-		    int contentId = 0;
-		    String content = null;
+
+			int contentId = 0;
+			String content = null;
+
+			ArrayList<String> contents = new ArrayList<String>();
+
 			while (rs.next()) {
 				contentId = rs.getInt("CONTENTID");
 				content = clobToString((CLOB) rs.getClob("BODY"));
 
-				logger.debug("Before : contentId=[{}], body=[{}]", contentId, content);
+				contents.add("/pages/viewpage.action?pageId=" + contentId);
 
-				//content = unwrap(Jsoup.parse(content));
 				content = unwrap(Jsoup.parse(content, "", Parser.xmlParser()));
-				
+
 				if (!dryRun) {
-					// db update
-					updateBody(contentId, content); 
+					updateBody(contentId, content);
 				}
-	    		
-	    			logger.debug("After : contentId=[{}], body=[{}]", contentId, content);
 			}
+			logger.debug(":+:+:+:+:+:+:+:+:+:+:+:+");
+			logger.debug("Job Done!! Page Count is " + contents.size());
+			logger.debug(":+:+:+:+:+:+:+:+:+:+:+:+");
+
+			String fileName = "./pages.txt";
+			try {
+				File file = new File(fileName);
+				FileWriter fw = new FileWriter(file, false);
+				fw.write(String.join("\n", contents));
+				fw.flush();
+				fw.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
 		} catch (Exception e) {
 			logger.error("Unhandled exception occurred while get contents and update.", e);
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
-				} catch (SQLException e) { /* Nothing to do */ }
+				} catch (SQLException e) {
+					/* Nothing to do */ }
 			}
-			
+
 			if (stmt != null) {
 				try {
 					stmt.close();
-				} catch (SQLException e) { /* Nothing to do */ }
+				} catch (SQLException e) {
+					/* Nothing to do */ }
 			}
-			
+
 			if (conn != null) {
 				try {
 					conn.close();
-				} catch (SQLException e) { /* Nothing to do */ }
+				} catch (SQLException e) {
+					/* Nothing to do */ }
 			}
 		}
 	}
-	
+
 	/**
 	 * update Body by contentId
 	 * 
@@ -147,7 +165,7 @@ public class RemoveSpanService {
 	private void updateBody(int contentId, String content) {
 		Statement stmt = null;
 		ResultSet rs = null;
-		
+
 		// 파라미터로 받아온 데이터로 Body를 업데이트 한다.
 		try {
 			conn = getConnection();
@@ -155,68 +173,46 @@ public class RemoveSpanService {
 
 			stmt = conn.createStatement();
 
-			//*
-			int count = content.length() / 2000;
-			
-			if ((content.length() % 2000) > 0) {
+			// *
+			int count = content.length() / 1800;
+
+			if ((content.length() % 1800) > 0) {
 				count += 1;
 			}
-			
+
 			String contentStr = null;
 
 			if (count > 1) {
 				for (int i = 1; i <= count; i++) {
 					if (i == 1) {
-						contentStr = "to_clob('" + content.substring(0, i * 2000) + "')";
+						contentStr = "to_clob('{" + content.substring(0, i * 1800).replaceAll("'", "''") + "}')";
 					} else if (i == count) {
-						contentStr += " || to_clob('" + content.substring(((i - 1) * 2000)) + "')";
+						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800)).replaceAll("'", "''") + "}')";
 					} else {
-						contentStr += " || to_clob('" + content.substring(((i - 1) * 2000), i * 2000) + "')";
+						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800), i * 1800).replaceAll("'", "''") + "}')";
 					}
 				}
 			} else {
-				contentStr = "to_clob('" + content + "')";
+				contentStr = "to_clob('{" + content.replaceAll("'", "''") + "}')";
 			}
-			
-			String sql = "update BODYCONTENT set BODY = " + contentStr + " where CONTENTID = " + contentId;
-			logger.debug(sql);
-			stmt.executeUpdate(sql);
-			/*/
-			CLOB lob_loc = null;
 
-		    ResultSet rset = stmt.executeQuery("SELECT BODY FROM BODYCONTENT WHERE CONTENTID = " + contentId + " FOR UPDATE");
-		    
-			if (rset.next()) {
-				lob_loc = ((oracle.jdbc.OracleResultSet) rset).getCLOB(1);
+			String sql = "update BODYCONTENT set BODY = " + contentStr + " where CONTENTID = " + contentId;
+
+			String fileName = "./query.txt";
+			try {
+				File file = new File(fileName);
+				FileWriter fw = new FileWriter(file, false);
+				fw.write(sql);
+				fw.flush();
+				fw.close();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			
-			// Open the LOB for READWRITE:
-			oracle.jdbc.OracleCallableStatement cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.OPEN(?, DBMS_LOB.LOB_READWRITE); END;");
-			cstmt.setCLOB(1, lob_loc);
-			cstmt.execute();
-			
-			// Erase the LOB
-			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.TRIM(?, 0); END;");
-			cstmt.setCLOB(1, lob_loc);
-			cstmt.execute();
-			
-			// Update the LOB
-			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.WRITE(?, ?, 1, ?); END;");
-			cstmt.setCLOB(1, lob_loc);
-			cstmt.setInt(2, content.length());
-			cstmt.setString(3, content);
-			cstmt.execute();
-			
-			// Close the LOB:
-			cstmt = (oracle.jdbc.OracleCallableStatement) conn.prepareCall("BEGIN DBMS_LOB.CLOSE(?); END;");
-			cstmt.setCLOB(1, lob_loc);
-			cstmt.execute();
-			
-			cstmt.close();
-			//*/
-			
+
+			stmt.executeUpdate(sql);
+
 			stmt.close();
-			
+
 			conn.commit();
 			conn.setAutoCommit(true);
 		} catch (Exception e) {
@@ -225,13 +221,15 @@ public class RemoveSpanService {
 			if (rs != null) {
 				try {
 					rs.close();
-				} catch (SQLException e) { /* Nothing to do */ }
+				} catch (SQLException e) {
+					/* Nothing to do */ }
 			}
-			
+
 			if (stmt != null) {
 				try {
 					stmt.close();
-				} catch (SQLException e) { /* Nothing to do */ }
+				} catch (SQLException e) {
+					/* Nothing to do */ }
 			}
 		}
 	}
@@ -240,67 +238,67 @@ public class RemoveSpanService {
 	 * <pre>
 	 * Remove <span lang="ko"/> and <span class="*" /> except <span style="*"/>
 	 * </pre>
+	 * 
 	 * @param element
 	 * @return
 	 */
 	private String unwrap(Element element) {
-        /*
-        Elements elements = element.select("span[lang=ko], span[class]").not("[style]");
-        
-        for (int i = 0; i < elements.size(); i++) {
-            elements.get(i).unwrap();
-        }
-        /*/
-        Elements elements = element.select("span[lang=ko], span[class]").not("[style]");
-        
-        int cnt = 1;
-        for (Element e : elements) {
-            cnt = 1;
-            
-            Element child = e;
-            for (int i = 0; i < spanCount; i++) {
-                if (hasChildSpan(child)) {
-                    cnt++;
-                    child = child.child(0);
-                }
-            }
+		/*
+		 * Elements elements =
+		 * element.select("span[lang=ko], span[class]").not("[style]");
+		 * 
+		 * for (int i = 0; i < elements.size(); i++) { elements.get(i).unwrap(); } /
+		 */
+		Elements elements = element.select("span[lang=ko], span[class]").not("[style]");
 
-            if (cnt >= spanCount) {
-                e.unwrap();
-            }
-        }
-        //*/
-        
-        return element.html();
-    }
-	
+		int cnt = 1;
+		for (Element e : elements) {
+			cnt = 1;
+
+			Element child = e;
+			for (int i = 0; i < spanCount; i++) {
+				if (hasChildSpan(child)) {
+					cnt++;
+					child = child.child(0);
+				}
+			}
+
+			if (cnt >= spanCount) {
+				e.unwrap();
+			}
+		}
+		// */
+
+		return element.html();
+	}
+
 	/**
 	 * <pre>
 	 * Check if element's child has span tag
 	 * </pre>
+	 * 
 	 * @param element
 	 * @return
 	 */
 	private boolean hasChildSpan(Element element) {
-        try {
-            if (element.childNodeSize() == 1 && 
-                    element.html().indexOf("<span") > -1 && 
-                    (element.child(0).hasAttr("lang") || element.child(0).hasAttr("class")) && 
-                    !element.child(0).hasAttr("style")) {
-                return true;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
-        
-        return false;
-    }
-	
+		try {
+			if (element.childNodeSize() == 1 && element.html().indexOf("<span") > -1
+			    && (element.child(0).hasAttr("lang") || element.child(0).hasAttr("class")) && !element.child(0).hasAttr("style")) {
+				return true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+
+		return false;
+	}
+
 	/**
 	 * <pre>
 	 * Get string from CLOB
 	 * </pre>
+	 * 
 	 * @param clob
 	 * @return
 	 * @throws IOException
@@ -321,28 +319,24 @@ public class RemoveSpanService {
 
 		return strOut.toString();
 	}
-	
+
 	/**
 	 * @return
 	 */
 	private Connection getConnection() {
-		logger.debug("JDBC Driver : {}", driver);
-		logger.debug("JDBC Url : {}", url);
-		logger.debug("JDBC Username : {}", username);
-		logger.debug("JDBC Password : {}", password);
-		
+
 		try {
 			if (conn == null || conn.isClosed()) {
 				Class.forName(driver);
 				conn = DriverManager.getConnection(url, username, password);
-				
+
 				logger.debug("DB Connected.");
 			}
 		} catch (Exception e) {
 			logger.error("Unhandled exception occurred while get connection.", e);
-		} 
-		
+		}
+
 		return conn;
 	}
 }
-//end of RemoveSpanService.java
+// end of RemoveSpanService.java
