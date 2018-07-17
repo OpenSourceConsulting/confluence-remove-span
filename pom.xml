@@ -2,33 +2,33 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.osci</groupId>
-	<artifactId>confluence-remove-span</artifactId>
-	<version>0.0.2</version>
+	<artifactId>remove-span</artifactId>
+	<version>0.0.3</version>
 	<packaging>jar</packaging>
 
 	<organization>
 		<name>Open Source Consulting Inc.</name>
 		<url>http://www.osci.kr</url>
 	</organization>
-	
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.0.2.RELEASE</version>
-    </parent>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.0.2.RELEASE</version>
+	</parent>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.8</java.version>
 		<skipTests>true</skipTests>
 	</properties>
-	
+
 	<dependencies>
 		<dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-        
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+
 		<!-- logging -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -42,25 +42,24 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>log4j-over-slf4j</artifactId>
 		</dependency>
-		
+
 		<!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
 		<dependency>
-		    <groupId>org.jsoup</groupId>
-		    <artifactId>jsoup</artifactId>
-		    <version>1.11.3</version>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.11.3</version>
 		</dependency>
-        
+
 		<dependency>
-		    <groupId>ojdbc6</groupId>
-		    <artifactId>ojdbc6</artifactId>
-		    <version>6_2</version>
-		    <scope>system</scope> 
-    			<systemPath>${basedir}/lib/ojdbc6_2.jar</systemPath>
+			<groupId>ojdbc6</groupId>
+			<artifactId>ojdbc6</artifactId>
+			<version>6_2</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/lib/ojdbc6_2.jar</systemPath>
 		</dependency>
 	</dependencies>
-	
+
 	<build>
-		<finalName>${project.artifactId}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

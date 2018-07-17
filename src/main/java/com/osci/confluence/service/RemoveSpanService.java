@@ -162,7 +162,7 @@ public class RemoveSpanService {
 	 * @param contentId
 	 * @param content
 	 */
-	private void updateBody(int contentId, String content) {
+	private void updateBody(int contentId, String contentOrigin) {
 		Statement stmt = null;
 		ResultSet rs = null;
 
@@ -174,9 +174,10 @@ public class RemoveSpanService {
 			stmt = conn.createStatement();
 
 			// *
-			int count = content.length() / 1800;
+			String content = contentOrigin.replace("'", "''");
+			int count = content.length() / 2000;
 
-			if ((content.length() % 1800) > 0) {
+			if ((content.length() % 2000) > 0) {
 				count += 1;
 			}
 
@@ -185,15 +186,15 @@ public class RemoveSpanService {
 			if (count > 1) {
 				for (int i = 1; i <= count; i++) {
 					if (i == 1) {
-						contentStr = "to_clob('{" + content.substring(0, i * 1800).replaceAll("'", "''") + "}')";
+						contentStr = "to_clob('" + content.substring(0, i * 2000) + "')";
 					} else if (i == count) {
-						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800)).replaceAll("'", "''") + "}')";
+						contentStr += " || to_clob('" + content.substring(((i - 1) * 2000)) + "')";
 					} else {
-						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800), i * 1800).replaceAll("'", "''") + "}')";
+						contentStr += " || to_clob('" + content.substring(((i - 1) * 2000), i * 2000) + "')";
 					}
 				}
 			} else {
-				contentStr = "to_clob('{" + content.replaceAll("'", "''") + "}')";
+				contentStr = "to_clob('" + content + "')";
 			}
 
 			String sql = "update BODYCONTENT set BODY = " + contentStr + " where CONTENTID = " + contentId;
