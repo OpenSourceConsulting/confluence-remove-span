@@ -174,9 +174,9 @@ public class RemoveSpanService {
 			stmt = conn.createStatement();
 
 			// *
-			int count = content.length() / 2000;
+			int count = content.length() / 1800;
 
-			if ((content.length() % 2000) > 0) {
+			if ((content.length() % 1800) > 0) {
 				count += 1;
 			}
 
@@ -185,11 +185,11 @@ public class RemoveSpanService {
 			if (count > 1) {
 				for (int i = 1; i <= count; i++) {
 					if (i == 1) {
-						contentStr = "to_clob('{" + content.substring(0, i * 2000).replaceAll("'", "''") + "}')";
+						contentStr = "to_clob('{" + content.substring(0, i * 1800).replaceAll("'", "''") + "}')";
 					} else if (i == count) {
-						contentStr += " || to_clob('{" + content.substring(((i - 1) * 2000)).replaceAll("'", "''") + "}')";
+						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800)).replaceAll("'", "''") + "}')";
 					} else {
-						contentStr += " || to_clob('{" + content.substring(((i - 1) * 2000), i * 2000).replaceAll("'", "''") + "}')";
+						contentStr += " || to_clob('{" + content.substring(((i - 1) * 1800), i * 1800).replaceAll("'", "''") + "}')";
 					}
 				}
 			} else {
