@@ -65,7 +65,7 @@ public class RemoveSpanService {
 	private String password;
 	@Value("${wiki.span.count:3}")
 	private Integer spanCount;
-	@Value("${wiki.dryRun:false}")
+	@Value("${wiki.dryRun:true}")
 	private Boolean dryRun;
 
 	private Connection conn = null;

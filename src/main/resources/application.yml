@@ -6,10 +6,10 @@ logging:
 jdbc:
   driver: oracle.jdbc.OracleDriver
   url: jdbc:oracle:thin:@192.168.0.155:1521:oscOra12
-  username: kapwiki
-  password: kapwiki
+  username: sec_wiki
+  password: sec_wiki
   
 wiki:
   span:
     count: 3
-  dryRun: false
+  dryRun: true
